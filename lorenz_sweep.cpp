@@ -65,7 +65,7 @@ vex::generator::Kernel<10> make_kernel(const vex::Context &ctx) {
      * Note that d2x/dt2 = dy/dt.
      */
     vex::generator::get_recorder() <<
-        "if ( fabs(" << dx_new[0] << ") < 1e-7 && fabs(" << dx_new[1] << ") > 1e-32) {\n"
+        "if (" << dx[0] << " * " << dx_new[0] << " < 0) {\n"
         "  if ((" << dx_new[1] << " < 0) && (" << x_new[0] << " > 0)) {\n"
         "    " << k << " += " << q << ";\n"
         "    " << q << " *= " << config::q << ";\n"
