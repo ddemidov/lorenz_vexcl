@@ -16,7 +16,7 @@ namespace odeint = boost::numeric::odeint;
 //---------------------------------------------------------------------------
 // Generate a monolythic kernel that does a single Runge-Kutta step.
 //---------------------------------------------------------------------------
-vex::generator::Kernel<5> make_kernel(const vex::Context &ctx) {
+vex::generator::Kernel<10> make_kernel(const vex::Context &ctx) {
     typedef vex::symbolic<double>       sym_vector;
     typedef boost::array<sym_vector, 3> sym_state;
 
@@ -25,29 +25,65 @@ vex::generator::Kernel<5> make_kernel(const vex::Context &ctx) {
     vex::generator::set_recorder(body);
 
     // Symbolic variables. These will be fed to odeint algorithm.
-    sym_state sym_S = {{
+    sym_state x = {{
         sym_vector(sym_vector::VectorParameter),
         sym_vector(sym_vector::VectorParameter),
         sym_vector(sym_vector::VectorParameter)
     }};
 
-    sym_vector sym_alpha (sym_vector::VectorParameter, sym_vector::Const);
-    sym_vector sym_lambda(sym_vector::VectorParameter, sym_vector::Const);
+    sym_state dx = {{
+        sym_vector(sym_vector::VectorParameter),
+        sym_vector(sym_vector::VectorParameter),
+        sym_vector(sym_vector::VectorParameter)
+    }};
+
+    sym_state x_new;
+    sym_state dx_new;
+
+    sym_vector alpha (sym_vector::VectorParameter, sym_vector::Const);
+    sym_vector lambda(sym_vector::VectorParameter, sym_vector::Const);
+
+    sym_vector k(sym_vector::VectorParameter);
+    sym_vector q(sym_vector::VectorParameter);
 
     // Stepper type
-    odeint::runge_kutta4_classic<
+    odeint::runge_kutta_dopri5<
         sym_state, double, sym_state, double,
         odeint::range_algebra, odeint::default_operations
         > stepper;
 
     // Record single RK4 step
-    lorenz_system<sym_state, sym_vector> sys(sym_alpha, sym_lambda, config::B);
-    stepper.do_step(std::ref(sys), sym_S, 0, config::dt);
+    lorenz_system<sym_state, sym_vector> sys(alpha, lambda, config::B);
+    stepper.do_step(std::ref(sys), x, dx, 0, x_new, dx_new, config::dt);
+
+    // Compute kneading invariant
+    /*
+     * if (dx/dt == 0) and (d2x/dt2 != 0), then {
+     *     update q
+     *     update k
+     * }
+     * Note that d2x/dt2 = dy/dt.
+     */
+    vex::generator::get_recorder() <<
+        "if ( fabs(" << dx_new[0] << ") < 1e-8 && fabs(" << dx_new[1] << ") > 1e-12) {\n"
+        "  if (" << dx_new[1] << " > 0) {\n"
+        "    " << k << " += " << q << ";\n"
+        "  }\n"
+        "  " << q << " *= " << config::q << ";\n"
+        "}\n";
+
+    // Save new values of coordinates and derivatives.
+    x[0] = x_new[0];
+    x[1] = x_new[1];
+    x[2] = x_new[2];
+
+    dx[0] = dx_new[0];
+    dx[1] = dx_new[1];
+    dx[2] = dx_new[2];
 
     // Generate the kernel from the recorded sequence
-    return vex::generator::build_kernel(ctx, "lorenz_sweep",
-            body.str(), sym_S[0], sym_S[1], sym_S[2], sym_alpha, sym_lambda);
-
+    return vex::generator::build_kernel(ctx, "lorenz_sweep", body.str(),
+            x[0], x[1], x[2], dx[0], dx[1], dx[2], k, q, alpha, lambda);
 }
 
 //---------------------------------------------------------------------------
@@ -74,14 +110,39 @@ int main(int argc, char *argv[]) {
     vex::vector<double> y(ctx, n);
     vex::vector<double> z(ctx, n);
 
+    vex::vector<double> dx(ctx, n);
+    vex::vector<double> dy(ctx, n);
+    vex::vector<double> dz(ctx, n);
+
     x = config::x0;
     y = config::y0;
     z = config::z0;
+
+    dx = 0;
+    dy = 0;
+    dz = 0;
+
+    // Kneading
+    vex::vector<double> k(ctx, n);
+    vex::vector<double> q(ctx, n);
+
+    k = 0;
+    q = 1;
 
     // Create kernel.
     auto lorenz = make_kernel(ctx);
 
     // Integrate over time.
-    for(double time = 0; time < config::tmax; time += config::dt)
-        lorenz(x, y, z, alpha, lambda);
+    for(double time = 0; time < config::tmax; time += config::dt) {
+        lorenz(x, y, z, dx, dy, dz, k, q, alpha, lambda);
+    }
+
+    std::vector<double> kneading(n);
+    vex::copy(k, kneading);
+    std::ofstream f("kneading.dat");
+    for(int j = 0, idx = 0; j < config::lambda_steps; ++j) {
+        for(int i = 0; i < config::alpha_steps; ++i, ++idx)
+            f << kneading[idx] << " ";
+        f << "\n";
+    }
 }

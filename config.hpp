@@ -21,6 +21,7 @@ extern double lambda_max;
 extern int    lambda_steps;
 
 extern double B;
+extern double q;
 
 void read(int argc, char *argv[]);
 

@@ -62,3 +62,9 @@ configure_file(
     ${CMAKE_CURRENT_BINARY_DIR}/plot_trajectory
     COPYONLY
     )
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/plot_kneading
+    ${CMAKE_CURRENT_BINARY_DIR}/plot_kneading
+    COPYONLY
+    )

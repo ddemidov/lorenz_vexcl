@@ -26,6 +26,7 @@ double lambda_max   = 1.5;
 int    lambda_steps = 100;
 
 double B = 0;
+double q = 0.25;
 
 template <typename T>
 std::string to_string(const T &val) {
@@ -60,7 +61,8 @@ void read(int argc, char *argv[]) {
         OPTION(lambda_min,   "Minimum lambda value")
         OPTION(lambda_max,   "Maximum lambda value")
         OPTION(lambda_steps, "Number of lambda values")
-        OPTION(B,            "Parameter B")
+        OPTION(B,            "Model parameter B")
+        OPTION(q,            "Kneading parameter q")
         ;
 
 #undef OPTION
