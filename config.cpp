@@ -16,6 +16,7 @@ double z0 = 1.0;
 
 double dt   = 0.01;
 double tmax = 10.0;
+int    kmax = 16;
 
 double alpha_min   = 0.01;
 double alpha_max   = 0.7;
@@ -55,6 +56,7 @@ void read(int argc, char *argv[]) {
         OPTION(z0,           "Initial Z xoordinate")
         OPTION(dt,           "Time step")
         OPTION(tmax,         "Time limit")
+        OPTION(kmax,         "Length of kneading sequence")
         OPTION(alpha_min,    "Minimum alpha value")
         OPTION(alpha_max,    "Maximum alpha value")
         OPTION(alpha_steps,  "Number of alpha values")
@@ -81,6 +83,9 @@ void read(int argc, char *argv[]) {
         po::store(po::parse_config_file(cfg, desc), vm);
         po::notify(vm);
     }
+
+    if (config::kmax > 64)
+        throw std::logic_error("kmax is too large (maximum suported is 64)");
 }
 
 }

@@ -16,7 +16,7 @@ namespace odeint = boost::numeric::odeint;
 //---------------------------------------------------------------------------
 // Generate a monolythic kernel that does a single Runge-Kutta step.
 //---------------------------------------------------------------------------
-vex::generator::Kernel<11> make_kernel(const vex::Context &ctx) {
+vex::generator::Kernel<12> make_kernel(const vex::Context &ctx) {
     typedef vex::symbolic<double>       sym_vector;
     typedef boost::array<sym_vector, 3> sym_state;
 
@@ -45,7 +45,11 @@ vex::generator::Kernel<11> make_kernel(const vex::Context &ctx) {
 
     sym_vector k(sym_vector::VectorParameter);
     sym_vector q(sym_vector::VectorParameter);
-    vex::symbolic<int> m(vex::symbolic<int>::VectorParameter);
+
+    vex::symbolic<cl_short> num(vex::symbolic<cl_short>::VectorParameter);
+    vex::symbolic<cl_ulong> seq(vex::symbolic<cl_ulong>::VectorParameter);
+
+    body << "if (" << num << " >= " << config::kmax << ") continue;\n";
 
     // Stepper type
     odeint::runge_kutta_dopri5<
@@ -65,16 +69,17 @@ vex::generator::Kernel<11> make_kernel(const vex::Context &ctx) {
      * }
      * Note that d2x/dt2 = dy/dt.
      */
-    vex::generator::get_recorder() <<
+    body <<
         "if (" << dx[0] << " * " << dx_new[0] << " < 0) {\n"
         "  if ((" << dx_new[1] << " < 0) && (" << x_new[0] << " > 0)) {\n"
         "    " << k << " += " << q << ";\n"
         "    " << q << " *= " << config::q << ";\n"
-        "    " << m << " += 1;\n"
+        "    " << seq << " |= (1 << " << num << ");\n"
+        "    " << num << " += 1;\n"
         "  } else\n"
         "  if ((" << dx_new[1] << " > 0) && (" << x_new[0] << " < 0)) {\n"
         "    " << q << " *= " << config::q << ";\n"
-        "    " << m << " += 1;\n"
+        "    " << num << " += 1;\n"
         "  }\n"
         "}\n";
 
@@ -89,7 +94,7 @@ vex::generator::Kernel<11> make_kernel(const vex::Context &ctx) {
 
     // Generate the kernel from the recorded sequence
     return vex::generator::build_kernel(ctx, "lorenz_sweep", body.str(),
-            x[0], x[1], x[2], dx[0], dx[1], dx[2], k, q, m, alpha, lambda);
+            x[0], x[1], x[2], dx[0], dx[1], dx[2], k, q, num, seq, alpha, lambda);
 }
 
 //---------------------------------------------------------------------------
@@ -132,32 +137,51 @@ int main(int argc, char *argv[]) {
         // Kneading
         vex::vector<double> k(ctx, n);
         vex::vector<double> q(ctx, n);
-        vex::vector<int>    m(ctx, n);
 
         k = -1;
         q =  1;
-        m =  0;
+
+        vex::vector<cl_short> num(ctx, n);
+        vex::vector<cl_ulong> seq(ctx, n);
+
+        num = 0;
+        seq = 0;
 
         // Create kernel.
         auto lorenz = make_kernel(ctx);
 
-        // Integrate over time.
-        for(double time = 0; time < config::tmax; time += config::dt) {
-            lorenz(x, y, z, dx, dy, dz, k, q, m, alpha, lambda);
-        }
-
         vex::Reductor<int, vex::MIN> min(ctx);
         vex::Reductor<int, vex::MAX> max(ctx);
 
-        std::cout << "Number of kneading points: " << min(m) << " - " << max(m) << std::endl;
+        // Integrate over time.
+        size_t iter = 0;
+        for(double time = 0; time < config::tmax; time += config::dt, ++iter) {
+            lorenz(x, y, z, dx, dy, dz, k, q, num, seq, alpha, lambda);
+            if (iter % 10 == 0 && min(num) >= config::kmax) break;
+        }
 
-        std::vector<double> kneading(n);
-        vex::copy(k, kneading);
-        std::ofstream f("kneading.dat");
-        for(int j = 0, idx = 0; j < config::lambda_steps; ++j) {
-            for(int i = 0; i < config::alpha_steps; ++i, ++idx)
-                f << kneading[idx] << " ";
-            f << "\n";
+        std::cout << "Number of kneading points: " << min(num) << " - " << max(num) << std::endl;
+
+        {
+            std::vector<double> kneading(n);
+            vex::copy(k, kneading);
+            std::ofstream f("kneading.dat");
+            for(int j = 0, idx = 0; j < config::lambda_steps; ++j) {
+                for(int i = 0; i < config::alpha_steps; ++i, ++idx)
+                    f << kneading[idx] << " ";
+                f << "\n";
+            }
+        }
+
+        {
+            std::vector<cl_ulong> sequence(n);
+            vex::copy(seq, sequence);
+            std::ofstream f("sequence.dat");
+            for(int j = 0, idx = 0; j < config::lambda_steps; ++j) {
+                for(int i = 0; i < config::alpha_steps; ++i, ++idx)
+                    f << sequence[idx] << " ";
+                f << "\n";
+            }
         }
     } catch (const vex::backend::error &e) {
         std::cerr << "VexCL error: " << e << std::endl;

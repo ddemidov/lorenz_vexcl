@@ -11,6 +11,7 @@ extern double z0;
 
 extern double dt;
 extern double tmax;
+extern int    kmax;
 
 extern double alpha_min;
 extern double alpha_max;
