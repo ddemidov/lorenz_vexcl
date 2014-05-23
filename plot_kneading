@@ -34,7 +34,7 @@ t = np.loadtxt(infile)
 
 fig = figure(num=1, figsize=(7,7))
 
-imshow(t, extent=[0.01,0.7,0.3,1.5], aspect=0.5)
+imshow(t, extent=[0.01,0.7,0.3,1.5], aspect=0.5, origin='lower')
 colorbar()
 
 xlabel('$\\alpha$')
