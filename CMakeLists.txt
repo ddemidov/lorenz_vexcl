@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(lorenz)
 
 add_definitions(-DVEXCL_CACHE_KERNELS)
+add_definitions(-DFUSION_MAX_VECTOR_SIZE=15)
 
 #----------------------------------------------------------------------------
 # Find VexCL
