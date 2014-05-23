@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
     vex::vector<double> k(ctx, n);
     vex::vector<double> q(ctx, n);
 
-    k = 0;
+    k = -1;
     q = 1;
 
     // Create kernel.
