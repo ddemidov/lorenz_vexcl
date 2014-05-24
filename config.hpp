@@ -4,6 +4,7 @@
 namespace config {
 
 extern std::string conf;
+extern std::string out;
 
 extern double x0;
 extern double y0;
@@ -22,7 +23,6 @@ extern double lambda_max;
 extern int    lambda_steps;
 
 extern double B;
-extern double q;
 
 void read(int argc, char *argv[]);
 

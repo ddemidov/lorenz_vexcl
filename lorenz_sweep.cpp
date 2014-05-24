@@ -2,6 +2,8 @@
 #include <vector>
 #include <string>
 
+#include <H5Cpp.h>
+
 #include <vexcl/vexcl.hpp>
 
 #include <boost/array.hpp>
@@ -16,7 +18,7 @@ namespace odeint = boost::numeric::odeint;
 //---------------------------------------------------------------------------
 // Generate a monolythic kernel that does a single Runge-Kutta step.
 //---------------------------------------------------------------------------
-vex::generator::Kernel<12> make_kernel(const vex::Context &ctx) {
+vex::generator::Kernel<10> make_kernel(const vex::Context &ctx) {
     typedef vex::symbolic<double>       sym_vector;
     typedef boost::array<sym_vector, 3> sym_state;
 
@@ -42,9 +44,6 @@ vex::generator::Kernel<12> make_kernel(const vex::Context &ctx) {
 
     sym_vector alpha (sym_vector::VectorParameter, sym_vector::Const);
     sym_vector lambda(sym_vector::VectorParameter, sym_vector::Const);
-
-    sym_vector k(sym_vector::VectorParameter);
-    sym_vector q(sym_vector::VectorParameter);
 
     vex::symbolic<cl_short> num(vex::symbolic<cl_short>::VectorParameter);
     vex::symbolic<cl_ulong> seq(vex::symbolic<cl_ulong>::VectorParameter);
@@ -72,13 +71,10 @@ vex::generator::Kernel<12> make_kernel(const vex::Context &ctx) {
     body <<
         "if (" << dx[0] << " * " << dx_new[0] << " < 0) {\n"
         "  if ((" << dx_new[1] << " < 0) && (" << x_new[0] << " > 0)) {\n"
-        "    " << k << " += " << q << ";\n"
-        "    " << q << " *= " << config::q << ";\n"
         "    " << seq << " |= (1 << " << num << ");\n"
         "    " << num << " += 1;\n"
         "  } else\n"
         "  if ((" << dx_new[1] << " > 0) && (" << x_new[0] << " < 0)) {\n"
-        "    " << q << " *= " << config::q << ";\n"
         "    " << num << " += 1;\n"
         "  }\n"
         "}\n";
@@ -94,8 +90,11 @@ vex::generator::Kernel<12> make_kernel(const vex::Context &ctx) {
 
     // Generate the kernel from the recorded sequence
     return vex::generator::build_kernel(ctx, "lorenz_sweep", body.str(),
-            x[0], x[1], x[2], dx[0], dx[1], dx[2], k, q, num, seq, alpha, lambda);
+            x[0], x[1], x[2], dx[0], dx[1], dx[2], num, seq, alpha, lambda);
 }
+
+//---------------------------------------------------------------------------
+void save_kneading(vex::vector<cl_ulong> &k);
 
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
@@ -134,16 +133,9 @@ int main(int argc, char *argv[]) {
         dy = 0;
         dz = 0;
 
-        // Kneading
-        vex::vector<double> k(ctx, n);
-        vex::vector<double> q(ctx, n);
-
-        k = -1;
-        q =  1;
-
+        // Kneading sequence
         vex::vector<cl_short> num(ctx, n);
         vex::vector<cl_ulong> seq(ctx, n);
-
         num = 0;
         seq = 0;
 
@@ -156,33 +148,13 @@ int main(int argc, char *argv[]) {
         // Integrate over time.
         size_t iter = 0;
         for(double time = 0; time < config::tmax; time += config::dt, ++iter) {
-            lorenz(x, y, z, dx, dy, dz, k, q, num, seq, alpha, lambda);
+            lorenz(x, y, z, dx, dy, dz, num, seq, alpha, lambda);
             if (iter % 10 == 0 && min(num) >= config::kmax) break;
         }
 
         std::cout << "Number of kneading points: " << min(num) << " - " << max(num) << std::endl;
 
-        {
-            std::vector<double> kneading(n);
-            vex::copy(k, kneading);
-            std::ofstream f("kneading.dat");
-            for(int j = 0, idx = 0; j < config::lambda_steps; ++j) {
-                for(int i = 0; i < config::alpha_steps; ++i, ++idx)
-                    f << kneading[idx] << " ";
-                f << "\n";
-            }
-        }
-
-        {
-            std::vector<cl_ulong> sequence(n);
-            vex::copy(seq, sequence);
-            std::ofstream f("sequence.dat");
-            for(int j = 0, idx = 0; j < config::lambda_steps; ++j) {
-                for(int i = 0; i < config::alpha_steps; ++i, ++idx)
-                    f << sequence[idx] << " ";
-                f << "\n";
-            }
-        }
+        save_kneading(seq);
     } catch (const vex::backend::error &e) {
         std::cerr << "VexCL error: " << e << std::endl;
         return 1;
@@ -191,3 +163,43 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 }
+
+//---------------------------------------------------------------------------
+void save_kneading(vex::vector<cl_ulong> &k) {
+    using namespace H5;
+
+    H5File hdf(config::out, H5F_ACC_TRUNC);
+
+    hsize_t dim[] = {
+        static_cast<hsize_t>(config::lambda_steps),
+        static_cast<hsize_t>(config::alpha_steps)
+    };
+
+    hsize_t one[] = { 1 };
+    DataSpace adsp(1, one);
+
+    std::vector<cl_ulong> k_host(k.size());
+    vex::copy(k, k_host);
+
+    DataSet ds = hdf.createDataSet("/K", PredType::NATIVE_UINT64, DataSpace(2, dim));
+    ds.write(k_host.data(), PredType::NATIVE_UINT64);
+
+#define CREATE_ATTRIBUTE(name, type) \
+    ds.createAttribute(#name, type, adsp).write(type, &config::name)
+
+    CREATE_ATTRIBUTE(x0,           PredType::NATIVE_DOUBLE);
+    CREATE_ATTRIBUTE(y0,           PredType::NATIVE_DOUBLE);
+    CREATE_ATTRIBUTE(z0,           PredType::NATIVE_DOUBLE);
+    CREATE_ATTRIBUTE(dt,           PredType::NATIVE_DOUBLE);
+    CREATE_ATTRIBUTE(kmax,         PredType::NATIVE_INT32);
+    CREATE_ATTRIBUTE(alpha_min,    PredType::NATIVE_DOUBLE);
+    CREATE_ATTRIBUTE(alpha_max,    PredType::NATIVE_DOUBLE);
+    CREATE_ATTRIBUTE(alpha_steps,  PredType::NATIVE_INT32);
+    CREATE_ATTRIBUTE(lambda_min,   PredType::NATIVE_DOUBLE);
+    CREATE_ATTRIBUTE(lambda_max,   PredType::NATIVE_DOUBLE);
+    CREATE_ATTRIBUTE(lambda_steps, PredType::NATIVE_INT32);
+    CREATE_ATTRIBUTE(B,            PredType::NATIVE_DOUBLE);
+
+#undef CREATE_ATTRIBUTE
+}
+

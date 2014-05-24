@@ -9,25 +9,25 @@
 namespace config {
 
 std::string conf = "lorenz.cfg";
+std::string out  = "kneading.h5";
 
-double x0 = 0.1;
-double y0 = 0.1;
-double z0 = 1.0;
+double x0 = 1e-3;
+double y0 = 0;
+double z0 = 0;
 
 double dt   = 0.01;
-double tmax = 10.0;
+double tmax = 1000.0;
 int    kmax = 16;
 
 double alpha_min   = 0.01;
 double alpha_max   = 0.7;
-int    alpha_steps = 100;
+int    alpha_steps = 1000;
 
 double lambda_min   = 0.3;
 double lambda_max   = 1.5;
-int    lambda_steps = 100;
+int    lambda_steps = 1000;
 
 double B = 0;
-double q = 0.25;
 
 template <typename T>
 std::string to_string(const T &val) {
@@ -51,6 +51,7 @@ void read(int argc, char *argv[]) {
     desc.add_options()
         ("help,h", "Show help")
         OPTION(conf,         "Configuration file")
+        OPTION(out,          "Output file")
         OPTION(x0,           "Initial X xoordinate")
         OPTION(y0,           "Initial Y xoordinate")
         OPTION(z0,           "Initial Z xoordinate")
@@ -64,7 +65,6 @@ void read(int argc, char *argv[]) {
         OPTION(lambda_max,   "Maximum lambda value")
         OPTION(lambda_steps, "Number of lambda values")
         OPTION(B,            "Model parameter B")
-        OPTION(q,            "Kneading parameter q")
         ;
 
 #undef OPTION

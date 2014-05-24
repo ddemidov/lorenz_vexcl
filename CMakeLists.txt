@@ -52,7 +52,11 @@ endif ()
 
 #----------------------------------------------------------------------------
 add_executable(lorenz_sweep lorenz_sweep.cpp config.cpp)
-target_link_libraries(lorenz_sweep ${Boost_LIBRARIES} ${OPENCL_LIBRARIES})
+target_link_libraries(lorenz_sweep
+    ${Boost_LIBRARIES}
+    ${OPENCL_LIBRARIES}
+    hdf5 hdf5_cpp
+    )
 
 add_executable(lorenz_test lorenz_test.cpp config.cpp)
 target_link_libraries(lorenz_test ${Boost_LIBRARIES})
