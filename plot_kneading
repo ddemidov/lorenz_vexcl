@@ -14,23 +14,28 @@ import argparse
 parser = argparse.ArgumentParser('Plot kneading invariant')
 
 parser.add_argument(
-    '--first', dest='first', type=int, default=1,
+    '-f, --file', dest='hdf', default='kneading.h5',
+    help='HDF5 file to process'
+    )
+
+parser.add_argument(
+    '--first', metavar='N', dest='first', type=int, default=1,
     help='Start of kneading subsequence to show (0-based)'
     )
 
 parser.add_argument(
-    '--length', dest='length', type=int, default=63,
-    help='Length of kneading subsequence to show'
+    '--last', metavar='N', dest='last', type=int, default=63,
+    help='End of kneading subsequence to show'
+    )
+
+parser.add_argument(
+    '-q', dest='q', type=float, default=0.5,
+    help='Ratio for kneading series'
     )
 
 parser.add_argument(
     '-o,--output', dest='out',
     help='Save result to the specified file instead of plotting'
-    )
-
-parser.add_argument(
-    '-f, --file', dest='hdf', default='kneading.h5',
-    help='HDF5 file to process'
     )
 
 args = parser.parse_args(sys.argv[1:])
@@ -57,11 +62,11 @@ lambda_max   = seq.attrs['lambda_max'][0]
 lambda_steps = seq.attrs['lambda_steps'][0]
 
 kbeg = args.first
-kend = min(seq.attrs['kmax'][0], args.first + args.length)
+kend = min(seq.attrs['kmax'][0], args.last + 1)
 
 K = np.zeros(seq.shape)
 for i in range(kbeg, kend):
-    K += np.power(0.5, i) * (np.bitwise_and(seq, np.left_shift(1, i))).astype(bool)
+    K += np.power(args.q, i) * (np.bitwise_and(seq, np.left_shift(1, i))).astype(bool)
 
 #----------------------------------------------------------------------------
 rc('text',   usetex=True)
@@ -78,7 +83,7 @@ colorbar()
 
 xlabel('$\\alpha$')
 ylabel('$\\lambda$')
-title('Kneading range: {%s - %s}' % (kbeg, kend))
+title('Kneading range: {%s - %s}' % (kbeg, kend - 1))
 
 if args.out:
     savefig(args.out)
