@@ -83,7 +83,7 @@ colorbar()
 
 xlabel('$\\alpha$')
 ylabel('$\\lambda$')
-title('Kneading range: {%s - %s}' % (kbeg, kend - 1))
+title('Kneading range: \\{%s - %s\\}' % (kbeg, kend - 1))
 
 if args.out:
     savefig(args.out)
