@@ -11,10 +11,10 @@ import argparse
 #----------------------------------------------------------------------------
 # Parse commandline arguments
 #----------------------------------------------------------------------------
-parser = argparse.ArgumentParser('Plot kneading invariant')
+parser = argparse.ArgumentParser(sys.argv[0])
 
 parser.add_argument(
-    '-f, --file', dest='hdf', default='kneading.h5',
+    '-f,--file', dest='hdf', default='kneading.h5',
     help='HDF5 file to process'
     )
 
