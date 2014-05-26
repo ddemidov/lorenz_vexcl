@@ -146,13 +146,16 @@ int main(int argc, char *argv[]) {
         vex::Reductor<int, vex::MAX> max(ctx);
 
         // Integrate over time.
-        size_t iter = 0;
-        for(double time = 0; time < config::tmax; time += config::dt, ++iter) {
+        int    iter = 0;
+        int    kmin = 0;
+        double time = 0;
+        for(; ; time += config::dt, ++iter) {
             lorenz(x, y, z, dx, dy, dz, num, seq, alpha, lambda);
-            if (iter % 10 == 0 && min(num) >= config::kmax) break;
+            if (iter % 10 == 0 && (kmin = min(num)) >= config::kmax) break;
         }
 
-        std::cout << "Number of kneading points: " << min(num) << " - " << max(num) << std::endl;
+        std::cout << "Kneading points: " << min(num) << std::endl;
+        std::cout << "Time to reach:   " << time << std::endl;
 
         save_kneading(seq);
     } catch (const vex::backend::error &e) {

@@ -16,8 +16,8 @@ typedef boost::array<double, 3> state_type;
 int main(int argc, char *argv[]) {
     config::read(argc, argv);
 
-    const double alpha  = 0.375;
-    const double lambda = 0.81;
+    const double alpha  = config::alpha_min;
+    const double lambda = config::lambda_min;
 
     // Stepper type
     odeint::runge_kutta4_classic<
