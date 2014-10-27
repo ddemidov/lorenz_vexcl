@@ -51,12 +51,14 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif ()
 
 #----------------------------------------------------------------------------
-add_executable(sm_sweep sm_sweep.cpp)
-target_link_libraries(sm_sweep
-    ${Boost_LIBRARIES}
-    ${OPENCL_LIBRARIES}
-    hdf5 hdf5_cpp
-    )
+foreach(sweep sm_sweep hg_sweep)
+    add_executable(${sweep} ${sweep}.cpp)
+    target_link_libraries(${sweep}
+        ${Boost_LIBRARIES}
+        ${OPENCL_LIBRARIES}
+        hdf5 hdf5_cpp
+        )
+endforeach()
 
 # Copy python scripts to build directory for convenience
 if (NOT ${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})

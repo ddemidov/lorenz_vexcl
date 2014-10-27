@@ -53,13 +53,11 @@ from pylab import *
 hdf = h5py.File(args.hdf, 'r')
 seq = hdf['/K']
 
-alpha_min   = seq.attrs['alpha_min'][0]
-alpha_max   = seq.attrs['alpha_max'][0]
-alpha_steps = seq.attrs['alpha_steps'][0]
+xmin = seq.attrs['xmin'][0]
+xmax = seq.attrs['xmax'][0]
 
-lambda_min   = seq.attrs['lambda_min'][0]
-lambda_max   = seq.attrs['lambda_max'][0]
-lambda_steps = seq.attrs['lambda_steps'][0]
+ymin = seq.attrs['ymin'][0]
+ymax = seq.attrs['ymax'][0]
 
 kbeg = args.first
 kend = min(seq.attrs['kmax'][0], args.last + 1)
@@ -78,11 +76,12 @@ rc('legend', fontsize=18)
 #----------------------------------------------------------------------------
 fig = figure(num=1, figsize=(7,7))
 
-imshow(K, extent=[alpha_min, alpha_max, lambda_min, lambda_max], aspect=0.5, origin='lower')
+imshow(K, extent=[xmin, xmax, ymin, ymax],
+        aspect=(xmax - xmin) / (ymax - ymin), origin='lower')
 colorbar()
 
-xlabel('$\\alpha$')
-ylabel('$\\lambda$')
+xlabel('p1')
+ylabel('p2')
 title('Kneading range: \\{%s - %s\\}' % (kbeg, kend - 1))
 
 if args.out:
