@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(lorenz)
+project(chaos)
 
 add_definitions(-DVEXCL_CACHE_KERNELS)
 add_definitions(-DFUSION_MAX_VECTOR_SIZE=15)
@@ -51,25 +51,18 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif ()
 
 #----------------------------------------------------------------------------
-add_executable(lorenz_sweep lorenz_sweep.cpp config.cpp)
-target_link_libraries(lorenz_sweep
+add_executable(sm_sweep sm_sweep.cpp)
+target_link_libraries(sm_sweep
     ${Boost_LIBRARIES}
     ${OPENCL_LIBRARIES}
     hdf5 hdf5_cpp
     )
 
-add_executable(lorenz_test lorenz_test.cpp config.cpp)
-target_link_libraries(lorenz_test ${Boost_LIBRARIES})
-
-# Copy plot_trajectory to build dir for convenience
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/plot_trajectory
-    ${CMAKE_CURRENT_BINARY_DIR}/plot_trajectory
-    COPYONLY
-    )
-
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/plot_kneading
-    ${CMAKE_CURRENT_BINARY_DIR}/plot_kneading
-    COPYONLY
-    )
+# Copy python scripts to build directory for convenience
+if (NOT ${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/plot_kneading
+        ${CMAKE_CURRENT_BINARY_DIR}/plot_kneading
+        COPYONLY
+        )
+endif()

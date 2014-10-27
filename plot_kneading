@@ -19,12 +19,12 @@ parser.add_argument(
     )
 
 parser.add_argument(
-    '--first', metavar='N', dest='first', type=int, default=1,
+    '-b,--first', metavar='N', dest='first', type=int, default=1,
     help='Start of kneading subsequence to show (0-based)'
     )
 
 parser.add_argument(
-    '--last', metavar='N', dest='last', type=int, default=63,
+    '-e,--last', metavar='N', dest='last', type=int, default=63,
     help='End of kneading subsequence to show'
     )
 
