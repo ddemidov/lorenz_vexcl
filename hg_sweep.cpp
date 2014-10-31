@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
         int    iter = 0;
         int    kmin = 0;
         double time = 0;
-        for(; ; time += config::dt, ++iter) {
+        for(; time <= config::tmax; time += config::dt, ++iter) {
             sweep(x, y, z, dx, dy, dz, num, seq, mu2, mu3);
 
             int last_kmin = kmin;
