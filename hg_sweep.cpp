@@ -45,7 +45,7 @@ namespace config {
     double tmax = 1000.0;
     int    kmax = 16;
 
-    double mu1 = 0;
+    double mu1 = 1;
 
     double mu2_min   = -2.0;
     double mu2_max   =  0.0;
