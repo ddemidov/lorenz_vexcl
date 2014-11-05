@@ -276,7 +276,7 @@ vex::generator::Kernel<10> make_kernel(const vex::Context &ctx) {
     body <<
         "if (" << dx[0] << " * " << dx_new[0] << " < 0) {\n"
         "  if ((" << dx_new[1] << " < 0) && (" << x_new[0] << " > 0)) {\n"
-        "    " << seq << " |= (1 << " << num << ");\n"
+        "    " << seq << " |= (1UL << " << num << ");\n"
         "    " << num << " += 1;\n"
         "  } else\n"
         "  if ((" << dx_new[1] << " > 0) && (" << x_new[0] << " < 0)) {\n"
