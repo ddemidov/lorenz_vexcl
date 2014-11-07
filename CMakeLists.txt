@@ -51,7 +51,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif ()
 
 #----------------------------------------------------------------------------
-foreach(sweep sm_sweep hg_sweep lorenz_sweep)
+foreach(sweep sm_sweep hg_sweep lorenz_sweep new_sweep)
     add_executable(${sweep} ${sweep}.cpp)
     target_link_libraries(${sweep}
         ${Boost_LIBRARIES}
