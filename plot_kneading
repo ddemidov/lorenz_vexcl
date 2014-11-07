@@ -76,8 +76,21 @@ rc('legend', fontsize=18)
 #----------------------------------------------------------------------------
 fig = figure(num=1, figsize=(7,7))
 
+def discrete_cmap(N, base_cmap=None):
+    """Create an N-bin discrete colormap from the specified input map"""
+
+    # Note that if base_cmap is a string or None, you can simply do
+    #    return plt.cm.get_cmap(base_cmap, N)
+    # The following works for string, None, or a colormap instance:
+
+    base = plt.cm.get_cmap(base_cmap)
+    color_list = base(np.linspace(0, 1, N))
+    cmap_name = base.name + str(N)
+    return base.from_list(cmap_name, color_list, N)
+
 imshow(K, extent=[xmin, xmax, ymin, ymax],
-        aspect=(xmax - xmin) / (ymax - ymin), origin='lower')
+        aspect=(xmax - xmin) / (ymax - ymin), origin='lower',
+        cmap=discrete_cmap(50, 'Paired'))
 colorbar()
 
 xlabel('p1')
