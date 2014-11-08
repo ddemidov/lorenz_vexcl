@@ -38,6 +38,16 @@ parser.add_argument(
     help='Save result to the specified file instead of plotting'
     )
 
+parser.add_argument(
+    '-c,--colormap', default='jet', dest='cm',
+    help='matplotlib colormap'
+    )
+
+parser.add_argument(
+    '-l,--levels', default=40, dest='levels',
+    help='Number of colormap levels'
+    )
+
 args = parser.parse_args(sys.argv[1:])
 
 #----------------------------------------------------------------------------
@@ -74,7 +84,7 @@ rc('font',   size=20)
 rc('legend', fontsize=18)
 
 #----------------------------------------------------------------------------
-fig = figure(num=1, figsize=(7,7))
+fig = figure(num=1, figsize=(10,10))
 
 def discrete_cmap(N, base_cmap=None):
     """Create an N-bin discrete colormap from the specified input map"""
@@ -90,7 +100,7 @@ def discrete_cmap(N, base_cmap=None):
 
 imshow(K, extent=[xmin, xmax, ymin, ymax],
         aspect=(xmax - xmin) / (ymax - ymin), origin='lower',
-        cmap=discrete_cmap(50, 'Paired'))
+        cmap=discrete_cmap(args.levels, args.cm))
 colorbar()
 
 xlabel('p1')
