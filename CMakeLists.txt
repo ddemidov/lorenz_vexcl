@@ -17,11 +17,23 @@ set(ODEINT_ROOT $ENV{ODEINT_ROOT} CACHE STRING "odeint root")
 include_directories( ${ODEINT_ROOT} )
 
 #----------------------------------------------------------------------------
-# Find OpenCL
+# Find Backend
 #----------------------------------------------------------------------------
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-find_package(OpenCL REQUIRED)
-include_directories( ${OPENCL_INCLUDE_DIRS} )
+set(VEXCL_BACKEND "OpenCL" CACHE STRING "Select VexCL backend (OpenCL/CUDA)")
+set_property(CACHE VEXCL_BACKEND PROPERTY STRINGS "OpenCL" "CUDA")
+
+if ("${VEXCL_BACKEND}" STREQUAL "OpenCL")
+    set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+    find_package(OpenCL REQUIRED)
+    include_directories( ${OPENCL_INCLUDE_DIRS} )
+    set(BACKEND_LIBS ${OPENCL_LIBRARIES})
+    add_definitions(-DVEXCL_BACKEND_OPENCL)
+elseif ("${VEXCL_BACKEND}" STREQUAL "CUDA")
+    find_package(CUDA REQUIRED)
+    include_directories( ${CUDA_INCLUDE_DIRS} )
+    set(BACKEND_LIBS ${CUDA_CUDA_LIBRARY})
+    add_definitions(-DVEXCL_BACKEND_CUDA)
+endif()
 
 #----------------------------------------------------------------------------
 # Find Boost
@@ -55,7 +67,7 @@ foreach(sweep sm_sweep hg_sweep lorenz_sweep new_sweep)
     add_executable(${sweep} ${sweep}.cpp)
     target_link_libraries(${sweep}
         ${Boost_LIBRARIES}
-        ${OPENCL_LIBRARIES}
+        ${BACKEND_LIBS}
         hdf5 hdf5_cpp
         )
 endforeach()
